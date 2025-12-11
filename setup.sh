@@ -74,19 +74,15 @@ if [ ! -f /etc/os-release ]; then
   exit 1
 fi
 
-EXPECTED_DISTRO_STRING="ubuntu debian"
-CURRENT_DISTRO=$(grep -E '^ID_LIKE=' /etc/os-release | awk -F'=' '{print $2}' | sed 's/"//g' | xargs)
-DISTRO_MATCH=0
+if [ ! -f /etc/os-release ]; then
+  echo "[ERROR] /etc/os-release not found. Cannot determine distribution." >&2
+  exit 1
+fi
 
-for id in $CURRENT_DISTRO; do
-    if echo "$EXPECTED_DISTRO_STRING" | grep -q "\b$id\b"; then
-        DISTRO_MATCH=1
-        break
-    fi
-done
+CURRENT_DISTRO_ID=$(grep '^ID=' /etc/os-release | cut -d'=' -f2 | tr -d '"')
 
-if [ $DISTRO_MATCH -eq 0 ]; then
-    echo "[ERROR] This script is only supported on Ubuntu" >&2
+if [[ "$CURRENT_DISTRO_ID" != "ubuntu" && "$CURRENT_DISTRO_ID" != "debian" ]]; then
+    echo "[ERROR] This script is only supported on Ubuntu or Debian." >&2
     exit 1
 fi
 
@@ -169,7 +165,7 @@ if [ "$TEE_STATUS" -ne 0 ]; then
 fi
 
 echo "[INFO] Creating a symlink to Nginx configuration"
-sudo ln -s /etc/nginx/sites-available/example.com /etc/nginx/sites-enabled/
+sudo ln -sf /etc/nginx/sites-available/"$DOMAIN" /etc/nginx/sites-enabled/
 
 # Test if Nginx configuration is OK
 echo "[INFO] Testing Nginx..."
@@ -201,16 +197,23 @@ fi
 echo "[INFO] Successfully finished setting up certbot via nginx"
 
 # Create DCR credentials via httpd
-echo "[INFO] Creating credentials for DCR"
+
 AUTH_FILE_NAME="htpasswd"
-AUTH_PATH="$HOME/auth"
+AUTH_PATH="$(pwd)/auth"
+AUTH_FILE="$AUTH_PATH/$AUTH_FILE_NAME"
 
-echo -n "$DCR_PASSWORD" | sudo docker run --rm -i -v "$AUTH_PATH":/etc/auth httpd:latest htpasswd -c -i /etc/auth/"$AUTH_FILE_NAME" "$DCR_LOGIN" > /dev/null 2>&1
-HTTPD_STATUS=$?
+if [ ! -f "$AUTH_FILE" ]; then
+  mkdir -p "$AUTH_PATH"
 
-if [ "$HTTPD_STATUS" -ne 0 ]; then
-  echo "[FATAL] Failed to create credential via httpd"
-  exit 1
+  echo "[INFO] Creating credentials for DCR"
+  
+  echo -n "$DCR_PASSWORD" | sudo docker run --rm -i -v "$AUTH_PATH":/etc/auth httpd:latest htpasswd -c -i /etc/auth/"$AUTH_FILE_NAME" "$DCR_LOGIN" > /dev/null 2>&1
+  HTTPD_STATUS=$?
+
+  if [ "$HTTPD_STATUS" -ne 0 ]; then
+    echo "[FATAL] Failed to create credential via httpd"
+    exit 1
+  fi
 fi
 
 # Start Docker Registry
@@ -224,7 +227,7 @@ docker run --restart=always \
   -v "$(pwd)/data":/var/lib/registry \
   -v "/etc/letsencrypt/live/$DOMAIN/fullchain.pem":/certs/domain.crt:ro \
   -v "/etc/letsencrypt/live/$DOMAIN/privkey.pem":/certs/domain.key:ro \
-  -v "$HOME/auth/htpasswd":/auth/htpasswd:ro \
+  -v "$(pwd)/auth/htpasswd":/auth/htpasswd:ro \
   -e REGISTRY_STORAGE_FILESYSTEM_ROOTDIRECTORY=/var/lib/registry \
   -e REGISTRY_AUTH=htpasswd \
   -e REGISTRY_AUTH_HTPASSWD_REALM="Registry Realm" \
