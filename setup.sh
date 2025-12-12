@@ -182,7 +182,7 @@ echo "[INFO] Nginx successfully reloaded"
 
 # Handle TLS via certbot-nginx
 echo "[INFO] Setting up certbot via nginx"
-certbot --nginx --non-interactive --agree-tos --redirect -d $DOMAIN -e $EMAIL > /dev/null 2>&1;
+certbot --nginx --non-interactive --agree-tos --redirect -d $DOMAIN --email $EMAIL > /dev/null 2>&1;
 CERTBOT_STATUS=$?
 
 if [ $CERTBOT_STATUS -ne 0 ]; then
