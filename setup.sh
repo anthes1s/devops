@@ -213,8 +213,8 @@ fi
 
 # Start Docker Registry
 echo "[INFO] Launching DCR..."
-docker stop registry > /dev/null 2>&1
-docker rm registry > /dev/null 2>&1
+docker stop registry > /dev/null 2>&1 || true
+docker rm registry > /dev/null 2>&1 || true
 
 docker run --restart=always \
   --name registry \
