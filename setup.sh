@@ -122,18 +122,12 @@ fi
 echo "[INFO] Docker successfully installed"
 
 # Check if Nginx is installed, if not, install it
-if ! command -v nginx > /dev/null 2>&1; then
-  echo "[WARN] Nginx is not installed"
-  echo "[INFO] Installing Nginx..."
-  sudo apt-get install -y nginx > /dev/null 2>&1
-fi
+echo "[INFO] Installing Nginx..."
+sudo apt-get install -y nginx > /dev/null 2>&1
 
 # Check if Certbot with Nginx plugin is installed, if not, install it
-if ! command -v certbot > /dev/null 2>&1; then
-  echo "[WARN] Certbot is not installed"
-  echo "[INFO] Installing Certbot..."
-  sudo apt-get install -y certbot python3-certbot-nginx > /dev/null 2>&1
-fi
+echo "[INFO] Installing Certbot..."
+sudo apt-get install -y certbot python3-certbot-nginx > /dev/null 2>&1
 
 # Write default config into a file
 echo "[INFO] Generating Nginx configration for $DOMAIN"
